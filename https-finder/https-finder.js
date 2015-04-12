@@ -6,6 +6,16 @@ var settings = {
 	autoswitch: false
 };
 
+chrome.storage.sync.get(
+	settings, // defaults
+	function(items){
+		console.log("Updating copy of settings from chrome.storage.sync");
+		for(var key in items){
+			settings[key] = items[key];
+		}
+	}
+);
+
 chrome.storage.onChanged.addListener(function(changes, namespace) {
 	for(var key in changes) {
 		if(key in settings){
