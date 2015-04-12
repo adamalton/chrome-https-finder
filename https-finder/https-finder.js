@@ -3,7 +3,7 @@
 // to wait for the asynchronous chrome.storage.sync.get callback.
 var settings = {
 	// these are the defaults
-	autoswitch: false,
+	autoswitch: true,
 	notifyOnAutoswitch: true
 };
 

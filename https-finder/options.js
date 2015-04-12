@@ -2,7 +2,7 @@
 // Currently only works with checkboxes
 
 var switches = {
-	autoswitch: false,
+	autoswitch: true,
 	notifyOnAutoswitch: true
 };
 
