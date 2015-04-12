@@ -2,6 +2,7 @@
   "manifest_version": 2,
 
   "name": "HTTPS Finder",
+  "short_name": "HTTPS Finder",
   "description": "Detects if pages are available on HTTPS and allows you to switch",
   "version": "1.0",
 
