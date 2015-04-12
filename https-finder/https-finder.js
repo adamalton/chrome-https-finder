@@ -1,3 +1,22 @@
+// Keep a local copy of the user settings, which is sync'd with chrome.storage.sync.
+// This allows us to reference the settings instantly when we need them without having
+// to wait for the asynchronous chrome.storage.sync.get callback.
+var settings = {
+	// these are the defaults
+	autoswitch: false
+};
+
+chrome.storage.onChanged.addListener(function(changes, namespace) {
+	for(var key in changes) {
+		if(key in settings){
+			settings[key] = changes[key].newValue;
+		}
+		console.log("updated setting %s to %s", key, changes[key].newValue);
+	}
+});
+
+
+
 
 var onNavigationCommitted = function(details){
 	console.log("onNavigationCommitted called");
@@ -53,18 +72,27 @@ var checkIfSecureVersionAvailable__fetch = function(details){
 
 var secureVersionIsAvailable = function(details){
 	console.log("secure version is available");
-	chrome.pageAction.show(details.tabId);
+	if(settings.autoswitch){
+		switchToSecureVersion(details.url);
+	}else{
+		chrome.pageAction.show(details.tabId);
+	}
 };
 
+var switchToSecureVersion = function(url){
+	console.log("switchToSecureVersion called");
+	var secure_url = url.replace(/^http:/, 'https:');
+	chrome.tabs.update({
+		url: secure_url
+	});
+};
 
 var onPageActionClicked = function(tab){
 	// fired when the user clicks the pageAction icon to switch to HTTPS
 	console.log("onPageActionClicked called");
 	console.dir(tab);
-	var secure_url = tab.url.replace(/^http:/, 'https:');
-	chrome.tabs.update({
-		url: secure_url
-	});
+	switchToSecureVersion(tab.url);
+
 };
 
 
