@@ -4,6 +4,15 @@
 	<title>HTTPS Finder Options</title>
 	<style>
 		body { padding: 10px; }
+		form div{
+			padding-top: 10px;
+		}
+		div.child{
+			padding-left: 20px;
+		}
+		div.child.disabled{
+			opacity: 0.4;
+		}
 		input[type=checkbox] { display: inline-block; vertical-align: top }
 		label { display: inline-block; width: 90%}
 		#status {
@@ -26,9 +35,16 @@
 		<div>
 			<input type="checkbox" name="autoswitch" id="autoswitch" />
 			<label for="autoswitch">
-				Automatically switch to the HTTPS version of a page if it's available.
+				Automatically switch me to the HTTPS version of a page if it's available.
 			</label>
+			<div class="child">
+				<input type="checkbox" name="notifyOnAutoswitch" id="notifyOnAutoswitch" />
+				<label for="notifyOnAutoswitch">
+					Show a brief notification when a page is automatically switched.
+				</label>
+			</div>
 		</div>
+
 	</form>
 	<div id="status">Options saved</div>
 	<script src="options.js"></script>
