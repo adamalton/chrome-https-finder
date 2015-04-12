@@ -15,10 +15,16 @@
     "default_title": "Page available on HTTPS. Click to switch."
   },
 
+  "options_ui": {
+    "page": "options.html",
+    "chrome_style": true
+  },
+
   "permissions": [
     "activeTab",
     "declarativeContent",
     "webNavigation",
+    "storage",
     "<all_urls>"
   ]
 }
