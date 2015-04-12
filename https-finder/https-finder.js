@@ -3,7 +3,8 @@
 // to wait for the asynchronous chrome.storage.sync.get callback.
 var settings = {
 	// these are the defaults
-	autoswitch: false
+	autoswitch: false,
+	notifyOnAutoswitch: true
 };
 
 chrome.storage.sync.get(
@@ -89,6 +90,9 @@ var secureVersionIsAvailable = function(details){
 	console.log("secure version is available");
 	if(settings.autoswitch){
 		switchToSecureVersion(details.url);
+		if(settings.notifyOnAutoswitch){
+			notify(getSecureUrl(details.url));
+		}
 	}else{
 		chrome.pageAction.show(details.tabId);
 	}
@@ -107,6 +111,20 @@ var onPageActionClicked = function(tab){
 	console.dir(tab);
 	switchToSecureVersion(tab.url);
 
+};
+
+var notify = function(url){
+	chrome.notifications.create(
+		"",
+		{
+			type: "basic",
+			iconUrl: "icon.png",
+			title: "HTTPs Finder",
+			message: "Switched to secure version of page at " + url,
+			isClickable: false
+		},
+		function(){}
+	);
 };
 
 var getSecureUrl = function(url){

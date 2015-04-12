@@ -25,6 +25,7 @@
     "declarativeContent",
     "webNavigation",
     "storage",
+    "notifications",
     "<all_urls>"
   ]
 }
