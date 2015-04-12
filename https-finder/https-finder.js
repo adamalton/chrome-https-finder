@@ -45,7 +45,6 @@ var onNavigationCommitted = function(details){
 
 
 var checkIfSecureVersionAvailable = function(details){
-	var secure_url = details.url.replace(/^http:/, 'https:');
 	var reqListener = function() {
 		console.log("Secure version response:")
 		console.dir(this);
@@ -62,15 +61,14 @@ var checkIfSecureVersionAvailable = function(details){
 	var req = new XMLHttpRequest();
 	req.onload = reqListener;
 	req.onerror = reqError;
-	req.open('get', secure_url, true);
+	req.open('get', getSecureUrl(details.url), true);
 	req.send();
 };
 
 
 // this should be usable in the near future
 var checkIfSecureVersionAvailable__fetch = function(details){
-	var secure_url = details.url.replace(/^http:/, 'https:');
-	fetch(secure_url)
+	fetch(getSecureUrl(details.url))
 		.then(
 			function(response){
 				if(response.status === 200){
@@ -98,9 +96,8 @@ var secureVersionIsAvailable = function(details){
 
 var switchToSecureVersion = function(url){
 	console.log("switchToSecureVersion called");
-	var secure_url = url.replace(/^http:/, 'https:');
 	chrome.tabs.update({
-		url: secure_url
+		url: getSecureUrl(url)
 	});
 };
 
@@ -112,6 +109,9 @@ var onPageActionClicked = function(tab){
 
 };
 
+var getSecureUrl = function(url){
+	return String(url).replace(/^http:/, 'https:');
+};
 
 chrome.webNavigation.onCommitted.addListener(
 	onNavigationCommitted,
