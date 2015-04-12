@@ -32,6 +32,13 @@ var onNavigationCommitted = function(details){
 	console.log("onNavigationCommitted called");
 	console.log(String(document.location));
 	console.dir(details.url);
+	if(details.frameId !== 0){
+		// TODO: we could potentially allow frames to be switched to HTTPS too, but that would
+		// probably require changing the way we change the page (or in this case frame) URL from
+		// chrome.tabs.update to something else
+		console.log("Not the top frame, skipping");
+		return;
+	}
 	checkIfSecureVersionAvailable(details);
 };
 
