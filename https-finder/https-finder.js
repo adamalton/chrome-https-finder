@@ -118,7 +118,7 @@ var notify = function(url){
 		"",
 		{
 			type: "basic",
-			iconUrl: "icon.png",
+			iconUrl: "images/icon48.png",
 			title: "HTTPs Finder",
 			message: "Switched to secure version of page at " + url,
 			isClickable: false
