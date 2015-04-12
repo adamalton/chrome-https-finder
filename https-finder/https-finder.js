@@ -46,12 +46,12 @@ var onNavigationCommitted = function(details){
 
 var checkIfSecureVersionAvailable = function(details){
 	var reqListener = function() {
-		console.log("Secure version response:")
+		console.log("Secure version response:");
 		console.dir(this);
 		if(this.status === 200){
 			secureVersionIsAvailable(details);
 		}else{
-			console.log("Secure version not available.")
+			console.log("Secure version not available.");
 		}
 	};
 	var reqError = function(err) {
