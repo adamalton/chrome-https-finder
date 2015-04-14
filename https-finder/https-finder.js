@@ -46,10 +46,12 @@ var onNavigationCommitted = function(details){
 
 
 var checkIfSecureVersionAvailable = function(details){
+	var secure_url = getSecureUrl(details.url);
 	var reqListener = function() {
 		console.log("Secure version response:");
 		console.dir(this);
-		if(this.status === 200){
+		if(this.status === 200 && this.responseURL === secure_url){
+			console.log('secure response is on secure URL');
 			secureVersionIsAvailable(details);
 		}else{
 			console.log("Secure version not available.");
@@ -62,7 +64,7 @@ var checkIfSecureVersionAvailable = function(details){
 	var req = new XMLHttpRequest();
 	req.onload = reqListener;
 	req.onerror = reqError;
-	req.open('get', getSecureUrl(details.url), true);
+	req.open('get', secure_url, true);
 	req.send();
 };
 
