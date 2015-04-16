@@ -6,6 +6,8 @@ var switches = {
 	notifyOnAutoswitch: true
 };
 
+var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
+
 function saveChanges(e) {
 	// Save values to storage and update state of child switches
 	var switch_values = {};
@@ -54,7 +56,30 @@ function restoreOptions() {
 	);
 }
 
+function loadStoredSecureDomains(){
+	console.log("sausage");
+	chrome.storage.local.get(FOUND_DOMAINS_STORAGE_KEY, populateStoredSecureDomainsUl);
+}
+
+function populateStoredSecureDomainsUl(items){
+	console.log("asdlkfjasdfk");
+	var domains = items[FOUND_DOMAINS_STORAGE_KEY];
+	var ul = document.getElementById("secure_domains");
+	var domain, li;
+	if(!domains){
+		domains = ["No domains found yet"];
+	}
+	for(var i=0; i< domains.length; i++){
+		domain = domains[i];
+		console.log(domain);
+		li = document.createElement('li');
+		li.innerHTML = domain;
+		ul.appendChild(li);
+	}
+}
+
 document.addEventListener('DOMContentLoaded', restoreOptions);
+document.addEventListener('DOMContentLoaded', loadStoredSecureDomains);
 
 for(var switch_name in switches){
 	document.getElementById(switch_name).addEventListener('change', saveChanges);

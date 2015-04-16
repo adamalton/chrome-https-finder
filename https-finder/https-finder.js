@@ -7,6 +7,8 @@ var settings = {
 	notifyOnAutoswitch: true
 };
 
+var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
+
 chrome.storage.sync.get(
 	settings, // defaults
 	function(items){
@@ -105,6 +107,35 @@ var switchToSecureVersion = function(url){
 	chrome.tabs.update({
 		url: getSecureUrl(url)
 	});
+	// we only store the fact that a domain is available securely once the user has actually
+	// switched (automatically or manually)
+	rememberSecureDomain(url);
+};
+
+var rememberSecureDomain = function(url){
+	// We deliberately use chrome.storage.local so that we're not storing a list of sites that the
+	// user has visited on Google's servers.  This is a trade off of one privacy thing against
+	// another - not using storage.sync means that the same user on a different computer may
+	// re-visit a site on HTTP which they have previously found to be available on HTTPS, which is
+	// bad, but I think not as bad as storing a list of domains that they've visisted on Google's
+	// servers.
+	console.log("rememberSecureDomain");
+	var domain = getDomain(url);
+	console.log(domain);
+	var callback = function(items){
+		console.log("rememberSecureDomain callback");
+		var domains = items[FOUND_DOMAINS_STORAGE_KEY];
+		if(!domains){
+			domains = [];
+			items[FOUND_DOMAINS_STORAGE_KEY] = domains;
+		}
+		if(domains.indexOf(domain) === -1){
+			// We haven't yet stored this domain
+			domains.push(domain);
+			chrome.storage.local.set(items);
+		}
+	};
+	chrome.storage.local.get(FOUND_DOMAINS_STORAGE_KEY, callback);
 };
 
 var onPageActionClicked = function(tab){
@@ -131,6 +162,11 @@ var notify = function(url){
 
 var getSecureUrl = function(url){
 	return String(url).replace(/^http:/, 'https:');
+};
+
+var getDomain = function(url){
+	var domain = url.split("//")[1];
+	return domain.match(/.*?(?=\/|$)/)[0];
 };
 
 chrome.webNavigation.onCommitted.addListener(

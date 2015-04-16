@@ -27,10 +27,23 @@
 			opacity: 0;
 			transition: opacity 0.5s;
 		}
+		#secure_domains{
+			list-style: none;padding: 0;
+			max-height: 300px;
+			overflow: auto;
+		}
+		#secure_domains li{
+			padding: 5px;
+			margin: 0;
+			background: #eee;
+			border: 1px solid #ddd;
+		}
+
 	</style>
 </head>
 
 <body>
+	<h1>Settings</h1>
 	<form>
 		<div>
 			<input type="checkbox" name="autoswitch" id="autoswitch" />
@@ -48,5 +61,12 @@
 	</form>
 	<div id="status">Options saved</div>
 	<script src="options.js"></script>
+
+	<h1>Secure Domains Found</h1>
+	<p>
+		These are the domains which you have previously switched to the secure versions of.
+	</p>
+	<ul id="secure_domains"></ul>
+
 </body>
 </html>
