@@ -93,7 +93,7 @@ var checkIfSecureVersionAvailable__fetch = function(details){
 var secureVersionIsAvailable = function(details){
 	console.log("secure version is available");
 	if(settings.autoswitch){
-		switchToSecureVersion(details.url);
+		switchToSecureVersion(details.url, details.tabId);
 		if(settings.notifyOnAutoswitch){
 			notify(getSecureUrl(details.url));
 		}
@@ -102,11 +102,11 @@ var secureVersionIsAvailable = function(details){
 	}
 };
 
-var switchToSecureVersion = function(url){
+var switchToSecureVersion = function(url, tab_id){
 	console.log("switchToSecureVersion called");
-	chrome.tabs.update({
-		url: getSecureUrl(url)
-	});
+	chrome.tabs.update(
+		tab_id, {url: getSecureUrl(url)}
+	);
 	// we only store the fact that a domain is available securely once the user has actually
 	// switched (automatically or manually)
 	rememberSecureDomain(url);
