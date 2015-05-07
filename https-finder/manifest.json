@@ -17,11 +17,6 @@
     "scripts": ["https-finder.js"]
   },
 
-  "page_action": {
-    "default_icon": "images/icon38.png",
-    "default_title": "Page available on HTTPS. Click to switch."
-  },
-
   "options_ui": {
     "page": "options.html",
     "chrome_style": true

@@ -8,6 +8,7 @@ var settings = {
 };
 
 var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
+var ACTIVE_NOTIFICATIONS = {}; // stores the info about notifiations which are currently open
 
 chrome.storage.sync.get(
 	settings, // defaults
@@ -98,7 +99,7 @@ var secureVersionIsAvailable = function(details){
 			notify(getSecureUrl(details.url));
 		}
 	}else{
-		chrome.pageAction.show(details.tabId);
+		notifyOfSecureVersionAvailable(details.url, details.tabId);
 	}
 };
 
@@ -146,7 +147,8 @@ var onPageActionClicked = function(tab){
 
 };
 
-var notify = function(url){
+var notifyOfSwitch = function(url){
+	// Notifiy the user that we have switched to the HTTPS version of the page
 	chrome.notifications.create(
 		"",
 		{
@@ -158,6 +160,42 @@ var notify = function(url){
 		},
 		function(){}
 	);
+};
+
+var notifyOfSecureVersionAvailable = function(url, tab_id){
+	chrome.notifications.create(
+		"",
+		{
+			type: "basic",
+			iconUrl: "images/icon48.png",
+			title: "HTTPs Finder",
+			message: "This page is available on HTTPS",
+			contextMessage: url,
+			isClickable: false,
+			buttons: [{"title": "Switch to secure version"}, {"title": "Dismiss"}]
+		},
+		function(notificationId){
+			// This is called by Chrome when the notification has been created
+			ACTIVE_NOTIFICATIONS[notificationId] = {"url": url, "tab_id": tab_id};
+		}
+	);
+};
+
+var notificationButtonClicked = function(notificationId, buttonIndex){
+	// This is written on the assumption that Chrome only fires the onButtonClicked event for
+	// notifications which were created by THIS Chrome extension
+	if(buttonIndex === 1){
+		chrome.notifications.clear(notificationId);
+	}else{
+		var details = ACTIVE_NOTIFICATIONS[notificationId];
+		switchToSecureVersion(details.url, details.tab_id);
+	}
+	delete ACTIVE_NOTIFICATIONS[notificationId];
+};
+
+var notificationClosed = function(notificationId, byUser){
+	// Called by Chrome when a notification is closed, either by the user or automatically
+	delete ACTIVE_NOTIFICATIONS[notificationId];
 };
 
 var getSecureUrl = function(url){
@@ -174,7 +212,8 @@ chrome.webNavigation.onCommitted.addListener(
 	{url: [{urlPrefix : 'http://'}]}
 );
 
-chrome.pageAction.onClicked.addListener(onPageActionClicked);
+chrome.notifications.onButtonClicked.addListener(notificationButtonClicked);
+chrome.notifications.onClosed.addListener(notificationClosed);
 
 
 
