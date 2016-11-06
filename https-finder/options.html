@@ -28,15 +28,31 @@
 			transition: opacity 0.5s;
 		}
 		#secure_domains{
-			list-style: none;padding: 0;
 			max-height: 300px;
 			overflow: auto;
 		}
-		#secure_domains li{
+		#secure_domains, #excluded_domains{
+			list-style: none;
+			padding: 0;
+		}
+		#secure_domains li, #excluded_domains li{
 			padding: 5px;
 			margin: 0;
 			background: #eee;
 			border: 1px solid #ddd;
+			overflow: hidden; /* float wrap */
+		}
+		#excluded_domains li span, #excluded_domains li input{
+			float: left;
+			width: 70%;
+		}
+		#excluded_domains li button{
+			float: right;
+			width: 25%;
+		}
+		#excluded_domains li span{
+			line-height: 2em;
+			padding-left: 5px;
 		}
 
 	</style>
@@ -57,16 +73,36 @@
 				</label>
 			</div>
 		</div>
-
 	</form>
+
+	<h1>Excluded Domains</h1>
+	<p>
+		If a domain is available on HTTPS but the site breaks (e.g. missing images), you can
+		exclude it here to prevent switching to the HTTPS version.
+	</p>
+
+	<ul id="excluded_domains">
+		<li class="empty">
+			No domains have been excluded.
+		</li>
+		<li class="form">
+			<form>
+				<input type="text" placeholder="example.com" />
+				<button type="submit">Add</button>
+			</form>
+		</li>
+	</ul>
+
 	<div id="status">Options saved</div>
-	<script src="options.js"></script>
 
 	<h1>Secure Domains Found</h1>
 	<p>
 		These are the domains which you have previously switched to the secure versions of.
 	</p>
 	<ul id="secure_domains"></ul>
+
+	<script src="jquery-3.1.1.min.js"></script>
+	<script src="options.js"></script>
 
 </body>
 </html>
