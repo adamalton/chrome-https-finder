@@ -7,7 +7,10 @@ var settings = {
 	notifyOnAutoswitch: true
 };
 
+var excluded_domains = []; // Will be populated from storage.sync
+
 var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
+var EXCLUDED_DOMAINS_STORAGE_KEY = 'https_finder_excluded_domains';
 var ACTIVE_NOTIFICATIONS = {}; // stores the info about notifiations which are currently open
 
 chrome.storage.sync.get(
@@ -20,16 +23,25 @@ chrome.storage.sync.get(
 	}
 );
 
+chrome.storage.sync.get(
+	EXCLUDED_DOMAINS_STORAGE_KEY,
+	function(items){
+		console.log("Updating excluded domains list from chrome.storage.sync");
+		excluded_domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
+	}
+);
+
 chrome.storage.onChanged.addListener(function(changes, namespace) {
 	for(var key in changes) {
 		if(key in settings){
 			settings[key] = changes[key].newValue;
+			console.log("Updated setting %s to %s", key, changes[key].newValue);
+		}else if(key === EXCLUDED_DOMAINS_STORAGE_KEY){
+			excluded_domains = changes[key].newValue;
+			console.log("Updated exluded domains list from storage change event.");
 		}
-		console.log("updated setting %s to %s", key, changes[key].newValue);
 	}
 });
-
-
 
 
 var onNavigationCommitted = function(details){
@@ -49,6 +61,10 @@ var onNavigationCommitted = function(details){
 
 
 var checkIfSecureVersionAvailable = function(details){
+	if(domainIsExcluded(details.url)){
+		console.log("Domain is excluded for URL: %s", details.url);
+		return;
+	}
 	var secure_url = getSecureUrl(details.url);
 	var reqListener = function() {
 		console.log("Secure version response:");
@@ -90,6 +106,44 @@ var checkIfSecureVersionAvailable__fetch = function(details){
 	);
 };
 
+
+var domainIsExcluded = function(url){
+	// Is the domain of the given URL excluded by the user's settings?
+	var domain = url.replace(/^http:\/\//, '').split('/')[0];
+	for(var i=0; i< excluded_domains.length; i++){
+		var excluded = excluded_domains[i];
+		if(!excluded){
+			continue;
+		}
+		// First check for an exact match
+		if(domain == excluded){
+			return true;
+		}else if(excluded.match(/^\./)){
+			// If the excluded domain is a wildcard, i.e. starts with a dot:
+			// Split both domains by their dots and match the parts in reverse order
+			var excluded_parts = excluded.replace(/^\./, '').split(".").reverse();
+			var domain_parts = domain.split(".").reverse();
+			// We only need to match all of the excluded parts, but we do need to match ALL of the
+			// excluded parts
+			if(domain_parts.length < excluded_parts.length){
+				continue;
+			}
+			domain_parts = domain_parts.slice(0, excluded_parts.length);
+			// Now do `array1 == array2`, but in Javascript
+			var match = true;
+			for(var i=0; i < excluded_parts.length; i++){
+				if(excluded_parts[i] !== domain_parts[i]){
+					match = false;
+					break;
+				}
+			}
+			if(match){
+				return true;
+			}
+		}
+	}
+	return false;
+}
 
 var secureVersionIsAvailable = function(details){
 	console.log("secure version is available");
