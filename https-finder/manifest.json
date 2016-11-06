@@ -23,11 +23,8 @@
   },
 
   "permissions": [
-    "activeTab",
-    "declarativeContent",
     "webNavigation",
     "storage",
-    "notifications",
-    "<all_urls>"
+    "notifications"
   ]
 }
