@@ -4,7 +4,7 @@
   "name": "HTTPS Finder",
   "short_name": "HTTPS Finder",
   "description": "Detects if pages are available on HTTPS and allows you to switch",
-  "version": "1.0",
+  "version": "1.2",
 
   "icons": {
     "16": "images/icon16.png",
