@@ -96,7 +96,7 @@ var secureVersionIsAvailable = function(details){
 	if(settings.autoswitch){
 		switchToSecureVersion(details.url, details.tabId);
 		if(settings.notifyOnAutoswitch){
-			notify(getSecureUrl(details.url));
+			notifyOfSwitch(getSecureUrl(details.url));
 		}
 	}else{
 		notifyOfSecureVersionAvailable(details.url, details.tabId);
