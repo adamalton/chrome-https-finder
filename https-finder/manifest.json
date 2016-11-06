@@ -25,6 +25,7 @@
   "permissions": [
     "webNavigation",
     "storage",
-    "notifications"
+    "notifications",
+    "<all_urls>"
   ]
 }
