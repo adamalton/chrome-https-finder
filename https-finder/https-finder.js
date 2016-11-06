@@ -239,7 +239,7 @@ var notifyOfSwitch = function(url){
 			type: "basic",
 			iconUrl: "images/icon48.png",
 			title: "HTTPs Finder",
-			message: "Switched to secure version of page at " + url,
+			message: "Switched to secure version of page at " + truncateURL(url, 50),
 			isClickable: false
 		},
 		function(){}
@@ -290,6 +290,25 @@ var getDomain = function(url){
 	var domain = url.split("//")[1];
 	return domain.match(/.*?(?=\/|$)/)[0];
 };
+
+var truncateURL = function(url, max_length){
+	// Given a URL, truncate it to the given length for nicey nice display purposes
+	// We always want to include the entire domain, even if it's long, and then truncate the
+	// path part if necessary.
+	// Find the end of the domain, i.e. the first slash which is not part of the http:// bit
+	var end_of_domain = url.match(/[^:\/]\//); // Also includes the preceding character, e.g. "m/"
+	if(!end_of_domain.length){
+		// No domain? No trailing slash? Empty URL? Aliens?
+		return url;
+	}
+	var min_length = url.indexOf(end_of_domain[0]);
+	var max_length = Math.max(min_length, max_length);
+	if(url.length <= max_length){
+		return url;
+	}
+	return url.substr(0, max_length) + "…";
+}
+
 
 chrome.webNavigation.onBeforeNavigate.addListener(
 	onBeforeNavigate,
