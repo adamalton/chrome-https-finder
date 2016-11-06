@@ -7,6 +7,7 @@ var settings = {
 	notifyOnAutoswitch: true
 };
 
+var secure_domains = []; // Will be populated from storage.sync
 var excluded_domains = []; // Will be populated from storage.sync
 
 var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
@@ -31,6 +32,14 @@ chrome.storage.sync.get(
 	}
 );
 
+chrome.storage.local.get(
+	FOUND_DOMAINS_STORAGE_KEY,
+	function(items){
+		console.log("Updating known HTTPS domains list from chrome.storage.local");
+		secure_domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
+	}
+);
+
 chrome.storage.onChanged.addListener(function(changes, namespace) {
 	for(var key in changes) {
 		if(key in settings){
@@ -42,6 +51,22 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 		}
 	}
 });
+
+var onBeforeNavigate = function(details){
+	// Event handler of chrome.webNavigation.onBeforeNavigate.
+	// If we know that the domain is secure and the 'autoswitch' setting is true, switch to the
+	// secure version before navigating
+	console.log("onBeforeNavigate called");
+	if(
+		details.frameId === 0 &&
+		isKnownSecureDomain(details.url) &&
+		!domainIsExcluded(details.url) &&
+		settings.autoswitch
+	){
+		console.log("onBeforeNavigate: this domain is known to be available on HTTPS.");
+		chrome.tabs.update(details.tabId, {url: getSecureUrl(details.url)});
+	}
+};
 
 
 var onNavigationCommitted = function(details){
@@ -193,6 +218,11 @@ var rememberSecureDomain = function(url){
 	chrome.storage.local.get(FOUND_DOMAINS_STORAGE_KEY, callback);
 };
 
+var isKnownSecureDomain = function(url){
+	var domain = getDomain(url);
+	return secure_domains.indexOf(domain) !== -1;
+}
+
 var onPageActionClicked = function(tab){
 	// fired when the user clicks the pageAction icon to switch to HTTPS
 	console.log("onPageActionClicked called");
@@ -260,6 +290,11 @@ var getDomain = function(url){
 	var domain = url.split("//")[1];
 	return domain.match(/.*?(?=\/|$)/)[0];
 };
+
+chrome.webNavigation.onBeforeNavigate.addListener(
+	onBeforeNavigate,
+	{url: [{schemes: ['http']}]}
+);
 
 chrome.webNavigation.onCommitted.addListener(
 	onNavigationCommitted,
