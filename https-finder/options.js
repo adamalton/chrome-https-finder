@@ -1,10 +1,12 @@
 var switches = {
 	autoswitch: true,
-	notifyOnAutoswitch: true
+	notifyOnAutoswitch: true,
+	syncDomains: false
 };
 
 var EXCLUDED_DOMAINS_STORAGE_KEY = 'https_finder_excluded_domains';
 var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
+var DOMAINS_STORAGE;
 
 var status_display_animation_timeout_1;
 var status_display_animation_timeout_2;
@@ -59,25 +61,51 @@ function showSavedMessage() {
 function fetchOptions() {
 	chrome.storage.sync.get(
 		switches, //defaults
-		setOptionsInForm
+		fetchOptionsCallback
 	);
 }
 
 
-function setOptionsInForm(items){
+function fetchOptionsCallback(items){
 	for(var switch_name in items){
-		document.getElementById(switch_name).checked = items[switch_name];
+		var value = items[switch_name];
+		switches[switch_name] = value;
+		document.getElementById(switch_name).checked = value;
 	}
 	setStateOfChildSwitches(); // we can only call this on page load after restoring the options
+	setDomainsStorage();
+	// These next 2 can only be called after setDomainsStorage() has been called
+	fetchExcludedDomains();
+	fetchKnownSecureDomains();
+}
+
+function setDomainsStorage(){
+	// Set DOMAINS_STORAGE to chrome.storage.local or chrome.storage.sync based on the user's pref.
+	var namespace = switches.syncDomains ? "sync" : "local";
+	DOMAINS_STORAGE = chrome.storage[namespace];
 }
 
 
+// When the syncDomains setting goes from false to true, the background page script will combine
+// the local lists of known/excluded domains with the ones in 'sync' storage (if any). So we need
+// to listen to the changing of the domains lists and update the <ul>s in this page accordingly.
+chrome.storage.onChanged.addListener(function(changes, namespace){
+	if(namespace === "sync"){
+		if(FOUND_DOMAINS_STORAGE_KEY in changes || EXCLUDED_DOMAINS_STORAGE_KEY in changes){
+			// This is slightly crude, but it saves duplication!
+			$("#excluded_domains li:not(.form)").remove();
+			$("#secure_domains li").remove();
+			fetchExcludedDomains();
+			fetchKnownSecureDomains();
+		}
+	}
+});
 
 //****************************** EXCLUDED DOMAINS ******************************
 
 function fetchExcludedDomains(){
 	// Fetch the list of excluded domains from the user's sync'd storage
-	chrome.storage.local.get(
+	DOMAINS_STORAGE.get(
 		EXCLUDED_DOMAINS_STORAGE_KEY,
 		setExcludedDomainsInList
 	);
@@ -94,7 +122,7 @@ function addExcludedDomain(e){
 	updateEmptyExcludedDomainsDisplay();
 
 	// Fetch the existing domains and add this one to it
-	chrome.storage.local.get(
+	DOMAINS_STORAGE.get(
 		EXCLUDED_DOMAINS_STORAGE_KEY,
 		function(items){
 			var domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
@@ -107,7 +135,7 @@ function addExcludedDomain(e){
 			// Store the updated items
 			console.log("Setting excluded domains:");
 			console.log(items);
-			chrome.storage.local.set(items, showSavedMessage);
+			DOMAINS_STORAGE.set(items, showSavedMessage);
 		}
 	);
 	return false;
@@ -119,7 +147,7 @@ function removeExcludedDomain(e){
 	var domain = $li.find("span").text().trim();
 	$li.remove();
 	updateEmptyExcludedDomainsDisplay();
-	chrome.storage.local.get(
+	DOMAINS_STORAGE.get(
 		EXCLUDED_DOMAINS_STORAGE_KEY,
 		function(items){
 			var domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
@@ -130,7 +158,7 @@ function removeExcludedDomain(e){
 			if(index > -1){
 				domains.splice(index, 1);
 			}
-			chrome.storage.local.set(items, showSavedMessage);
+			DOMAINS_STORAGE.set(items, showSavedMessage);
 		}
 	);
 }
@@ -176,12 +204,12 @@ function setExcludedDomainsInList(items){
 //****************************** STORED SECURE DOMAINS ******************************
 
 
-function loadStoredSecureDomains(){
-	chrome.storage.local.get(FOUND_DOMAINS_STORAGE_KEY, populateStoredSecureDomainsUl);
+function fetchKnownSecureDomains(){
+	DOMAINS_STORAGE.get(FOUND_DOMAINS_STORAGE_KEY, populateStoredSecureDomainsUl);
 }
 
 function populateStoredSecureDomainsUl(items){
-	console.log("asdlkfjasdfk");
+	console.log("populateStoredSecureDomainsUl");
 	var domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
 	var $ul = $("#secure_domains");
 	if(!domains.length){
@@ -199,8 +227,6 @@ function populateStoredSecureDomainsUl(items){
 
 function init(){
 	fetchOptions();
-	fetchExcludedDomains();
-	loadStoredSecureDomains();
 
 	$(document).on('click', '#excluded_domains button.remove', removeExcludedDomain);
 	$(document).on('submit', '#excluded_domains form', addExcludedDomain);

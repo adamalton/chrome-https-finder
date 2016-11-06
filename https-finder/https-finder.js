@@ -4,7 +4,8 @@
 var settings = {
 	// these are the defaults
 	autoswitch: true,
-	notifyOnAutoswitch: true
+	notifyOnAutoswitch: true,
+	syncDomains: false
 };
 
 var secure_domains = []; // Will be populated from storage.sync
@@ -13,7 +14,7 @@ var excluded_domains = []; // Will be populated from storage.sync
 var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
 var EXCLUDED_DOMAINS_STORAGE_KEY = 'https_finder_excluded_domains';
 var ACTIVE_NOTIFICATIONS = {}; // stores the info about notifiations which are currently open
-
+var DOMAINS_STORAGE;
 
 // Debugging tool for wiping stuff
 var wipeKnownHTTPSDomainsList = function(){
@@ -33,43 +34,117 @@ var wipeKnownHTTPSDomainsList = function(){
 chrome.storage.sync.get(
 	settings, // defaults
 	function(items){
+		// Update our local copy of the settings dict
 		console.log("Updating copy of settings from chrome.storage.sync");
 		for(var key in items){
 			settings[key] = items[key];
 		}
+		// And set DOMAINS_STORAGE to either chrome.storage.sync or chrome.storage.local
+		// Note that if the `syncDomains` setting has been *changed* then handleSyncDomainsSettingChange
+		// should get called
+		var domains_storage_namespace = items.syncDomains ? "sync" : "local";
+		DOMAINS_STORAGE = chrome.storage[domains_storage_namespace];
+		fetchDomainsLists();
 	}
 );
 
-chrome.storage.local.get(
-	EXCLUDED_DOMAINS_STORAGE_KEY,
-	function(items){
-		console.log("Updating excluded domains list from chrome.storage.sync");
-		excluded_domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
-	}
-);
+function fetchDomainsLists(){
+	// Once the DOMAINS_STORAGE variable has been set to the right thing, fetch the lists of
+	// secure and exluded domdains into local variables
+	DOMAINS_STORAGE.get(
+		EXCLUDED_DOMAINS_STORAGE_KEY,
+		function(items){
+			console.log("Updating excluded domains list from chrome.storage");
+			excluded_domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
+		}
+	);
 
-chrome.storage.local.get(
-	FOUND_DOMAINS_STORAGE_KEY,
-	function(items){
-		console.log("Updating known HTTPS domains list from chrome.storage.local");
-		secure_domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
-	}
-);
+	DOMAINS_STORAGE.get(
+		FOUND_DOMAINS_STORAGE_KEY,
+		function(items){
+			console.log("Updating known HTTPS domains list from chrome.storage");
+			secure_domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
+		}
+	);
+}
+
 
 chrome.storage.onChanged.addListener(function(changes, namespace) {
 	for(var key in changes) {
 		if(key in settings){
 			settings[key] = changes[key].newValue;
 			console.log("Updated setting %s to %s", key, changes[key].newValue);
-		}else if(key === EXCLUDED_DOMAINS_STORAGE_KEY){
-			excluded_domains = changes[key].newValue;
-			console.log("Updated exluded domains list from storage change event.");
-		}else if(key === FOUND_DOMAINS_STORAGE_KEY){
-			secure_domains = changes[key].newValue;
-			console.log("Updated known HTTPS domains list from storage change event.");
+			if(key === "syncDomains"){
+				handleSyncDomainsSettingChange(changes[key].newValue);
+			}
+			continue;
+		}
+		// Updating the lists of known/excluded domains should only be done if the namespace of the
+		// update is the same as the namespace being used for our domains storage. Otherwise our
+		// handleSyncDomainsSettingChange handler will cause us to wipe our list of domains when going
+		// from 'sync' to 'local' (because it in turn wipes the lists of domains from 'sync' which
+		// in turn brings us to here). So if the 'sync' lists have been changed but we are not
+		// using the 'sync' storage then ignore it.
+		if(settings.syncDomains && namespace === "sync" || !settings.syncDomains && namespace === "local"){
+			if(key === EXCLUDED_DOMAINS_STORAGE_KEY){
+				excluded_domains = changes[key].newValue;
+				console.log("Updated exluded domains list from storage change event.");
+			}else if(key === FOUND_DOMAINS_STORAGE_KEY){
+				secure_domains = changes[key].newValue;
+				console.log("Updated known HTTPS domains list from storage change event.");
+			}
 		}
 	}
 });
+
+function handleSyncDomainsSettingChange(new_value){
+	// Change handler for the 'sync' setting.
+	console.log("handleSyncDomainsSettingChange");
+	// When this setting is changed (either by the user in the Options screen or because they've
+	// changed it in the Options screen on another device and the setting itself is being synced
+	// to here) we have to do several things:
+	// 1. If the setting has been changed to 'false', wipe all domains lists from the sync storage
+	// for prviacy.
+	if(!new_value){
+		var items = {};
+		items[FOUND_DOMAINS_STORAGE_KEY] = [];
+		items[EXCLUDED_DOMAINS_STORAGE_KEY] = [];
+		// Note that this has a sort of circular callback effect with our onChanged listener
+		chrome.storage.sync.set(items);
+	}
+	// 2. If the setting has been changed to 'true', ensure that the current local lists are
+	// combined into/with the remote 'sync' lists.
+	// We don't know if our local variables of `secure_domains` and `excluded_domains` already
+	//contain the lists from storage.local or not yet, so we fetch from storage.local first...
+	chrome.storage.local.get(
+		[FOUND_DOMAINS_STORAGE_KEY, EXCLUDED_DOMAINS_STORAGE_KEY],
+		function(items){
+			var local_secure_domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
+			var local_excluded_domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
+			chrome.storage.sync.get(
+				[FOUND_DOMAINS_STORAGE_KEY, EXCLUDED_DOMAINS_STORAGE_KEY],
+				function(items){
+					// Combine the storage.local arrays with the storage.sync arrays
+					var combined_secure_domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
+					combined_secure_domains.concat(local_secure_domains);
+					combined_secure_domains = arrayUnique(combined_secure_domains);
+					var combined_excluded_domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
+					combined_excluded_domains.concat(local_excluded_domains);
+					combined_excluded_domains = arrayUnique(combined_excluded_domains);
+					// And set the combined arrays back into storage.sync
+					items[FOUND_DOMAINS_STORAGE_KEY] = combined_secure_domains;
+					items[EXCLUDED_DOMAINS_STORAGE_KEY] = combined_excluded_domains;
+					chrome.storage.sync.set(items);
+				}
+			);
+		}
+	);
+	//3. Change the global DOMAINS_STORAGE variable to point at chrome.storage.local or
+	// chrome.storage.sync as appropriate
+	var namespace = new_value ? "sync" : "local";
+	DOMAINS_STORAGE = chrome.storage[namespace];
+}
+
 
 var syncExcludedDomainsBackToStorage = function(){
 	// Take the local variable `excluded_domains` and sync it back to chrome.storage.
@@ -77,7 +152,7 @@ var syncExcludedDomainsBackToStorage = function(){
 	// version FROM storage first, just push TO it
 	var items = {};
 	items[EXCLUDED_DOMAINS_STORAGE_KEY] = excluded_domains;
-	chrome.storage.local.set(items);
+	DOMAINS_STORAGE.set(items);
 }
 
 var onBeforeNavigate = function(details){
@@ -221,15 +296,12 @@ var switchToSecureVersion = function(url, tab_id){
 };
 
 var rememberSecureDomain = function(url){
-	// We deliberately use chrome.storage.local so that we're not storing a list of sites that the
-	// user has visited on Google's servers.  This is a trade off of one privacy thing against
-	// another - not using storage.sync means that the same user on a different computer may
-	// re-visit a site on HTTP which they have previously found to be available on HTTPS, which is
-	// bad, but I think not as bad as storing a list of domains that they've visisted on Google's
-	// servers.
+	// Store the domain of the given URL into the list of known HTTPS domains
 	console.log("rememberSecureDomain");
 	var domain = getDomain(url);
 	console.log(domain);
+	// We update the list of domains in chrome.storage, and our onChange handler then syncs
+	// it back into our local `secure_domains` variable
 	var callback = function(items){
 		console.log("rememberSecureDomain callback");
 		var domains = items[FOUND_DOMAINS_STORAGE_KEY];
@@ -240,10 +312,10 @@ var rememberSecureDomain = function(url){
 		if(domains.indexOf(domain) === -1){
 			// We haven't yet stored this domain
 			domains.push(domain);
-			chrome.storage.local.set(items);
+			DOMAINS_STORAGE.set(items);
 		}
 	};
-	chrome.storage.local.get(FOUND_DOMAINS_STORAGE_KEY, callback);
+	DOMAINS_STORAGE.get(FOUND_DOMAINS_STORAGE_KEY, callback);
 };
 
 var isKnownSecureDomain = function(url){
@@ -362,7 +434,18 @@ var truncateURL = function(url, max_length){
 		return url;
 	}
 	return url.substr(0, max_length) + "…";
-}
+};
+
+function arrayUnique(array) {
+	var a = array.concat();
+	for(var i=0; i<a.length; ++i) {
+		for(var j=i+1; j<a.length; ++j) {
+			if(a[i] === a[j])
+				a.splice(j--, 1);
+		}
+	}
+	return a;
+};
 
 
 chrome.webNavigation.onBeforeNavigate.addListener(
