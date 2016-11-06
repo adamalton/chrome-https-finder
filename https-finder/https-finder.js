@@ -55,6 +55,15 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 	}
 });
 
+var syncExcludedDomainsBackToStorage = function(){
+	// Take the local variable `excluded_domains` and sync it back to chrome.storage.
+	// We've got the chrome.storage.onChanged listener, so we shouldn't need to pull the latest
+	// version FROM storage first, just push TO it
+	var items = {};
+	items[EXCLUDED_DOMAINS_STORAGE_KEY] = excluded_domains;
+	chrome.storage.sync.set(items);
+}
+
 var onBeforeNavigate = function(details){
 	// Event handler of chrome.webNavigation.onBeforeNavigate.
 	// If we know that the domain is secure and the 'autoswitch' setting is true, switch to the
@@ -178,7 +187,7 @@ var secureVersionIsAvailable = function(details){
 	if(settings.autoswitch){
 		switchToSecureVersion(details.url, details.tabId);
 		if(settings.notifyOnAutoswitch){
-			notifyOfSwitch(getSecureUrl(details.url));
+			notifyOfSwitch(getSecureUrl(details.url), details.tabId);
 		}
 	}else{
 		notifyOfSecureVersionAvailable(details.url, details.tabId);
@@ -234,18 +243,26 @@ var onPageActionClicked = function(tab){
 
 };
 
-var notifyOfSwitch = function(url){
+var notifyOfSwitch = function(url, tab_id){
 	// Notifiy the user that we have switched to the HTTPS version of the page
 	chrome.notifications.create(
 		"",
 		{
 			type: "basic",
 			iconUrl: "images/icon48.png",
-			title: "HTTPs Finder",
+			title: "HTTPS Finder",
 			message: "Switched to secure version of page at " + truncateURL(url, 50),
-			isClickable: false
+			isClickable: false,
+			buttons: [{"title": "Switch back & exclude this domain"}]
 		},
-		function(){}
+		function(notificationId){
+			// This is called by Chrome when the notification has been created
+			ACTIVE_NOTIFICATIONS[notificationId] = {
+				type: "switch_done",
+				url: url,
+				tab_id: tab_id,
+			};
+		}
 	);
 };
 
@@ -255,15 +272,19 @@ var notifyOfSecureVersionAvailable = function(url, tab_id){
 		{
 			type: "basic",
 			iconUrl: "images/icon48.png",
-			title: "HTTPs Finder",
+			title: "HTTPS Finder",
 			message: "This page is available on HTTPS",
 			contextMessage: url,
 			isClickable: false,
-			buttons: [{"title": "Switch to secure version"}, {"title": "Dismiss"}]
+			buttons: [{"title": "Switch to secure version"}]
 		},
 		function(notificationId){
 			// This is called by Chrome when the notification has been created
-			ACTIVE_NOTIFICATIONS[notificationId] = {"url": url, "tab_id": tab_id};
+			ACTIVE_NOTIFICATIONS[notificationId] = {
+				type: "switch_possible",
+				url: url,
+				tab_id: tab_id,
+			};
 		}
 	);
 };
@@ -271,12 +292,18 @@ var notifyOfSecureVersionAvailable = function(url, tab_id){
 var notificationButtonClicked = function(notificationId, buttonIndex){
 	// This is written on the assumption that Chrome only fires the onButtonClicked event for
 	// notifications which were created by THIS Chrome extension
-	if(buttonIndex === 1){
-		chrome.notifications.clear(notificationId);
-	}else{
-		var details = ACTIVE_NOTIFICATIONS[notificationId];
+	var details = ACTIVE_NOTIFICATIONS[notificationId];
+	if(details.type === "switch_possible"){
+		// The only button on this type of notification is the "swtch to HTTPS button"
 		switchToSecureVersion(details.url, details.tab_id);
+	}else if(details.type === "switch_done"){
+		// The only button on this type of notification is the "switch back and exclude" button
+		var domain = getDomain(details.url);
+		excluded_domains.push(domain);
+		syncExcludedDomainsBackToStorage();
+		chrome.tabs.update(details.tab_id, {url: getInsecureUrl(details.url)});
 	}
+	chrome.notifications.clear(notificationId);
 	delete ACTIVE_NOTIFICATIONS[notificationId];
 };
 
@@ -288,6 +315,10 @@ var notificationClosed = function(notificationId, byUser){
 var getSecureUrl = function(url){
 	return String(url).replace(/^http:/, 'https:');
 };
+
+var getInsecureUrl = function(url){
+	return String(url).replace(/^https:/, 'http:');
+}
 
 var getDomain = function(url){
 	var domain = url.split("//")[1];
