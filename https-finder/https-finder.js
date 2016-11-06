@@ -40,7 +40,7 @@ chrome.storage.sync.get(
 	}
 );
 
-chrome.storage.sync.get(
+chrome.storage.local.get(
 	EXCLUDED_DOMAINS_STORAGE_KEY,
 	function(items){
 		console.log("Updating excluded domains list from chrome.storage.sync");
@@ -77,7 +77,7 @@ var syncExcludedDomainsBackToStorage = function(){
 	// version FROM storage first, just push TO it
 	var items = {};
 	items[EXCLUDED_DOMAINS_STORAGE_KEY] = excluded_domains;
-	chrome.storage.sync.set(items);
+	chrome.storage.local.set(items);
 }
 
 var onBeforeNavigate = function(details){

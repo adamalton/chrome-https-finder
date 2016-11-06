@@ -1,6 +1,3 @@
-// Saves options to chrome.storage.sync.
-// Currently only works with checkboxes
-
 var switches = {
 	autoswitch: true,
 	notifyOnAutoswitch: true
@@ -80,7 +77,7 @@ function setOptionsInForm(items){
 
 function fetchExcludedDomains(){
 	// Fetch the list of excluded domains from the user's sync'd storage
-	chrome.storage.sync.get(
+	chrome.storage.local.get(
 		EXCLUDED_DOMAINS_STORAGE_KEY,
 		setExcludedDomainsInList
 	);
@@ -97,7 +94,7 @@ function addExcludedDomain(e){
 	updateEmptyExcludedDomainsDisplay();
 
 	// Fetch the existing domains and add this one to it
-	chrome.storage.sync.get(
+	chrome.storage.local.get(
 		EXCLUDED_DOMAINS_STORAGE_KEY,
 		function(items){
 			var domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
@@ -110,7 +107,7 @@ function addExcludedDomain(e){
 			// Store the updated items
 			console.log("Setting excluded domains:");
 			console.log(items);
-			chrome.storage.sync.set(items, showSavedMessage);
+			chrome.storage.local.set(items, showSavedMessage);
 		}
 	);
 	return false;
@@ -122,7 +119,7 @@ function removeExcludedDomain(e){
 	var domain = $li.find("span").text().trim();
 	$li.remove();
 	updateEmptyExcludedDomainsDisplay();
-	chrome.storage.sync.get(
+	chrome.storage.local.get(
 		EXCLUDED_DOMAINS_STORAGE_KEY,
 		function(items){
 			var domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
@@ -133,7 +130,7 @@ function removeExcludedDomain(e){
 			if(index > -1){
 				domains.splice(index, 1);
 			}
-			chrome.storage.sync.set(items, showSavedMessage);
+			chrome.storage.local.set(items, showSavedMessage);
 		}
 	);
 }
