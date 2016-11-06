@@ -182,18 +182,14 @@ function loadStoredSecureDomains(){
 
 function populateStoredSecureDomainsUl(items){
 	console.log("asdlkfjasdfk");
-	var domains = items[FOUND_DOMAINS_STORAGE_KEY];
-	var ul = document.getElementById("secure_domains");
-	var domain, li;
-	if(!domains){
-		domains = ["No domains found yet"];
+	var domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
+	var $ul = $("#secure_domains");
+	if(!domains.length){
+		$('<li/>').addClass("empty").text("No domains found yet").appendTo($ul);
+		return;
 	}
 	for(var i=0; i< domains.length; i++){
-		domain = domains[i];
-		console.log(domain);
-		li = document.createElement('li');
-		li.innerHTML = domain;
-		ul.appendChild(li);
+		$('<li/>').text(domains[i]).appendTo($ul);
 	}
 }
 

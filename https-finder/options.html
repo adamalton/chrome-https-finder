@@ -4,6 +4,12 @@
 	<title>HTTPS Finder Options</title>
 	<style>
 		body { padding: 0 10px 10px 10px; }
+		h1 {
+			padding-top: 10px;
+		}
+		h1.pad-top{
+			padding-top: 20px;
+		}
 		form div{
 			padding-top: 10px;
 		}
@@ -91,16 +97,11 @@
 		</div>
 	</form>
 
-	<h1>Excluded Domains</h1>
+	<h1 class="pad-top">Excluded Domains</h1>
 	<p>
 		If a domain is available on HTTPS but the site breaks (e.g. missing images), you can
 		exclude it here to prevent switching to the HTTPS version.
 	</p>
-	<p>
-		You can match all subdomains by starting the domain with a dot.  E.g. <code>.google.com</code>
-		will exclude <code>www.google.com</code>, <code>anything.google.com</code>, etc.
-	</p>
-
 	<ul id="excluded_domains">
 		<li class="form">
 			<form>
@@ -109,8 +110,12 @@
 			</form>
 		</li>
 	</ul>
+	<small>
+		You can match all subdomains by starting the domain with a dot.  E.g. <code>.google.com</code>
+		will exclude <code>google.com</code> as well as <code>www.google.com</code>, etc.
+	</small>
 
-	<h1>Secure Domains Found</h1>
+	<h1 class="pad-top">Secure Domains Found</h1>
 	<p>
 		These are the domains which you have previously switched to the secure versions of.
 	</p>
