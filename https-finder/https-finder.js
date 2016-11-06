@@ -251,14 +251,6 @@ var isKnownSecureDomain = function(url){
 	return secure_domains.indexOf(domain) !== -1;
 }
 
-var onPageActionClicked = function(tab){
-	// fired when the user clicks the pageAction icon to switch to HTTPS
-	console.log("onPageActionClicked called");
-	console.dir(tab);
-	switchToSecureVersion(tab.url);
-
-};
-
 var notifyOfSwitch = function(url, tab_id){
 	// Notifiy the user that we have switched to the HTTPS version of the page
 	chrome.notifications.create(
