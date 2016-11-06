@@ -263,7 +263,7 @@ var getDomain = function(url){
 
 chrome.webNavigation.onCommitted.addListener(
 	onNavigationCommitted,
-	{url: [{urlPrefix : 'http://'}]}
+	{url: [{schemes: ['http']}]}
 );
 
 chrome.notifications.onButtonClicked.addListener(notificationButtonClicked);
