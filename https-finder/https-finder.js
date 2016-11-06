@@ -14,6 +14,22 @@ var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
 var EXCLUDED_DOMAINS_STORAGE_KEY = 'https_finder_excluded_domains';
 var ACTIVE_NOTIFICATIONS = {}; // stores the info about notifiations which are currently open
 
+
+// Debugging tool for wiping stuff
+var wipeKnownHTTPSDomainsList = function(){
+	var items = {};
+	items[FOUND_DOMAINS_STORAGE_KEY] = [];
+	chrome.storage.local.set(
+		items,
+		function(items){
+			console.log("Wiped local storage of known HTTPS domains list.");
+		}
+	);
+};
+
+// wipeKnownHTTPSDomainsList();
+
+
 chrome.storage.sync.get(
 	settings, // defaults
 	function(items){
