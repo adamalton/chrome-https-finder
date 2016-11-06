@@ -9,6 +9,8 @@ var switches = {
 var EXCLUDED_DOMAINS_STORAGE_KEY = 'https_finder_excluded_domains';
 var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
 
+var status_display_animation_timeout_1;
+var status_display_animation_timeout_2;
 
 //****************************** BOOLEAN OPTIONS ******************************
 
@@ -41,11 +43,19 @@ function setStateOfChildSwitches(){
 
 function showSavedMessage() {
 	// Update status to let user know options were saved.
-	var status = document.getElementById('status');
-	status.className = 'visible';
-	setTimeout(function() {
-		status.className = 'hidden';
-	}, 750);
+	var $status = $("#status");
+	clearTimeout(status_display_animation_timeout_1);
+	clearTimeout(status_display_animation_timeout_2);
+	$status.removeClass("hidden").addClass("visible");
+	status_display_animation_timeout_1 = setTimeout(function() {
+		// Add the CSS class to trigger the transition, then after that's done remove all classes
+		// so that the height is set back to 0 (so that it doesn't cover up stuff on the page)
+		$status.addClass("hidden");
+		status_display_animation_timeout_2 = setTimeout(
+			function(){$status.removeClass("hidden visible");},
+			1000
+		);
+	}, 1100);
 }
 
 
@@ -100,7 +110,7 @@ function addExcludedDomain(e){
 			// Store the updated items
 			console.log("Setting excluded domains:");
 			console.log(items);
-			chrome.storage.sync.set(items);
+			chrome.storage.sync.set(items, showSavedMessage);
 		}
 	);
 	return false;
@@ -123,7 +133,7 @@ function removeExcludedDomain(e){
 			if(index > -1){
 				domains.splice(index, 1);
 			}
-			chrome.storage.sync.set(items);
+			chrome.storage.sync.set(items, showSavedMessage);
 		}
 	);
 }
