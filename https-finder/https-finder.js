@@ -284,7 +284,10 @@ var notifyOfSecureVersionAvailable = function(url, tab_id){
 			message: "This page is available on HTTPS",
 			contextMessage: url,
 			isClickable: false,
-			buttons: [{"title": "Switch to secure version"}]
+			buttons: [
+				{"title": "Switch to secure version"},
+				{"title": "Never for this domain"}
+			]
 		},
 		function(notificationId){
 			// This is called by Chrome when the notification has been created
@@ -302,8 +305,18 @@ var notificationButtonClicked = function(notificationId, buttonIndex){
 	// notifications which were created by THIS Chrome extension
 	var details = ACTIVE_NOTIFICATIONS[notificationId];
 	if(details.type === "switch_possible"){
-		// The only button on this type of notification is the "swtch to HTTPS button"
-		switchToSecureVersion(details.url, details.tab_id);
+		// On this type of notification there are 2 buttons: "switch (once)" and "Never switch"
+		if(buttonIndex === 0){
+			// Switch (once).  Note that the "only this once" bit is based on the user's settings,
+			// not on whether or not we store this as a known HTTPS domain (we always store it).
+			switchToSecureVersion(details.url, details.tab_id);
+		}else{
+			// Exclude this domain
+			var domain = getDomain(details.url);
+			excluded_domains.push(domain);
+			syncExcludedDomainsBackToStorage();
+		}
+
 	}else if(details.type === "switch_done"){
 		// The only button on this type of notification is the "switch back and exclude" button
 		var domain = getDomain(details.url);
