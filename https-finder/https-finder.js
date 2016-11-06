@@ -48,6 +48,9 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 		}else if(key === EXCLUDED_DOMAINS_STORAGE_KEY){
 			excluded_domains = changes[key].newValue;
 			console.log("Updated exluded domains list from storage change event.");
+		}else if(key === FOUND_DOMAINS_STORAGE_KEY){
+			secure_domains = changes[key].newValue;
+			console.log("Updated known HTTPS domains list from storage change event.");
 		}
 	}
 });
