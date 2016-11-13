@@ -112,39 +112,40 @@ function handleSyncDomainsSettingChange(new_value){
 		items[EXCLUDED_DOMAINS_STORAGE_KEY] = [];
 		// Note that this has a sort of circular callback effect with our onChanged listener
 		chrome.storage.sync.set(items);
+	}else{
+		// 2. If the setting has been changed to 'true', ensure that the current local lists are
+		// combined into/with the remote 'sync' lists.
+		// We don't know if our local variables of `secure_domains` and `excluded_domains` already
+		//contain the lists from storage.local or not yet, so we fetch from storage.local first...
+		chrome.storage.local.get(
+			[FOUND_DOMAINS_STORAGE_KEY, EXCLUDED_DOMAINS_STORAGE_KEY],
+			function(items){
+				var local_secure_domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
+				var local_excluded_domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
+				chrome.storage.sync.get(
+					[FOUND_DOMAINS_STORAGE_KEY, EXCLUDED_DOMAINS_STORAGE_KEY],
+					function(items){
+						// Combine the storage.local arrays with the storage.sync arrays
+						var combined_secure_domains = arrayUnique(local_secure_domains.concat(
+							items[FOUND_DOMAINS_STORAGE_KEY] || []
+						));
+						var combined_excluded_domains = arrayUnique(local_excluded_domains.concat(
+							items[EXCLUDED_DOMAINS_STORAGE_KEY] || []
+						));
+						combined_excluded_domains = arrayUnique(combined_excluded_domains);
+						// And set the combined arrays back into storage.sync
+						items[FOUND_DOMAINS_STORAGE_KEY] = combined_secure_domains;
+						items[EXCLUDED_DOMAINS_STORAGE_KEY] = combined_excluded_domains;
+						console.log("Combining (local and sync) domains lists:");
+						console	.log(items);
+						// Our chrome.storage.onChange handler will update our local variables
+						chrome.storage.sync.set(items);
+						chrome.storage.local.set(items);
+					}
+				);
+			}
+		);
 	}
-	// 2. If the setting has been changed to 'true', ensure that the current local lists are
-	// combined into/with the remote 'sync' lists.
-	// We don't know if our local variables of `secure_domains` and `excluded_domains` already
-	//contain the lists from storage.local or not yet, so we fetch from storage.local first...
-	chrome.storage.local.get(
-		[FOUND_DOMAINS_STORAGE_KEY, EXCLUDED_DOMAINS_STORAGE_KEY],
-		function(items){
-			var local_secure_domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
-			var local_excluded_domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
-			chrome.storage.sync.get(
-				[FOUND_DOMAINS_STORAGE_KEY, EXCLUDED_DOMAINS_STORAGE_KEY],
-				function(items){
-					// Combine the storage.local arrays with the storage.sync arrays
-					var combined_secure_domains = arrayUnique(local_secure_domains.concat(
-						items[FOUND_DOMAINS_STORAGE_KEY] || []
-					));
-					var combined_excluded_domains = arrayUnique(local_excluded_domains.concat(
-						items[EXCLUDED_DOMAINS_STORAGE_KEY] || []
-					));
-					combined_excluded_domains = arrayUnique(combined_excluded_domains);
-					// And set the combined arrays back into storage.sync
-					items[FOUND_DOMAINS_STORAGE_KEY] = combined_secure_domains;
-					items[EXCLUDED_DOMAINS_STORAGE_KEY] = combined_excluded_domains;
-					console.log("Combining (local and sync) domains lists:");
-					console	.log(items);
-					// Our chrome.storage.onChange handler will update our local variables
-					chrome.storage.sync.set(items);
-					chrome.storage.local.set(items);
-				}
-			);
-		}
-	);
 	//3. Change the global DOMAINS_STORAGE variable to point at chrome.storage.local or
 	// chrome.storage.sync as appropriate
 	var namespace = new_value ? "sync" : "local";
