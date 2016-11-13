@@ -85,7 +85,9 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 		// from 'sync' to 'local' (because it in turn wipes the lists of domains from 'sync' which
 		// in turn brings us to here). So if the 'sync' lists have been changed but we are not
 		// using the 'sync' storage then ignore it.
-		if(settings.syncDomains && namespace === "sync" || !settings.syncDomains && namespace === "local"){
+		if((settings.syncDomains && namespace === "sync") || (!settings.syncDomains && namespace === "local")){
+			// We need to COMINE the lists, because otherwise, if the extension updates the lists
+			// on another device, it will wipe over the existing local list here
 			if(key === EXCLUDED_DOMAINS_STORAGE_KEY){
 				excluded_domains = arrayUnique(excluded_domains.concat(changes[key].newValue));
 				if(namespace == "sync"){
