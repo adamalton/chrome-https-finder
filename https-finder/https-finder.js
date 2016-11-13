@@ -174,8 +174,6 @@ var onBeforeNavigate = function(details){
 
 var onNavigationCommitted = function(details){
 	console.log("onNavigationCommitted called");
-	console.log(String(document.location));
-	console.dir(details.url);
 	if(details.frameId !== 0){
 		// TODO: we could potentially allow frames to be switched to HTTPS too, but that would
 		// probably require changing the way we change the page (or in this case frame) URL from
@@ -189,10 +187,13 @@ var onNavigationCommitted = function(details){
 
 
 var checkIfSecureVersionAvailable = function(details){
+	// Check if a secure version of details.url is available, & if so call secureVersionIsAvailable
+	console.log("checkIfSecureVersionAvailable");
 	if(domainIsExcluded(details.url)){
 		console.log("Domain is excluded for URL: %s", details.url);
 		return;
 	}
+	console.log("Checking for secure version of URL: %s", details.url);
 	var secure_url = getSecureUrl(details.url);
 	var reqListener = function() {
 		console.log("Secure version response:");
