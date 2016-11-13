@@ -4,9 +4,7 @@ var switches = {
 	syncDomains: false
 };
 
-var EXCLUDED_DOMAINS_STORAGE_KEY = 'https_finder_excluded_domains';
-var FOUND_DOMAINS_STORAGE_KEY = 'https_finder_found_domains';
-var DOMAINS_STORAGE;
+var domainsStorage;
 
 var status_display_animation_timeout_1;
 var status_display_animation_timeout_2;
@@ -73,46 +71,20 @@ function fetchOptionsCallback(items){
 		document.getElementById(switch_name).checked = value;
 	}
 	setStateOfChildSwitches(); // we can only call this on page load after restoring the options
-	setDomainsStorage();
-	// These next 2 can only be called after setDomainsStorage() has been called
-	fetchExcludedDomains();
-	fetchKnownSecureDomains();
-}
-
-function setDomainsStorage(){
-	// Set DOMAINS_STORAGE to chrome.storage.local or chrome.storage.sync based on the user's pref.
-	var namespace = switches.syncDomains ? "sync" : "local";
-	DOMAINS_STORAGE = chrome.storage[namespace];
 }
 
 
-// When the syncDomains setting goes from false to true, the background page script will take the
-// lists of known/excluded domains from 'sync' storage and combine them into the lists in 'local'
-// storage. So we need to listen to the changing of the local domains lists and update the <ul>s
-// in this page accordingly. If we listen to the changing of the lists in 'sync' storage, then when
-// the syncDomains setting goes from true to false we will catch the wiping out of the list 'sync'
-// and will end up displaying empty <ul>s.
+// When one of the lists of known/excluded domains is changed, update the page to reflect the
+// changes
 chrome.storage.onChanged.addListener(function(changes, namespace){
-	if(namespace === "local"){
-		if(FOUND_DOMAINS_STORAGE_KEY in changes || EXCLUDED_DOMAINS_STORAGE_KEY in changes){
-			// This is slightly crude, but it saves duplication!
-			$("#excluded_domains li:not(.form)").remove();
-			$("#secure_domains li").remove();
-			fetchExcludedDomains();
-			fetchKnownSecureDomains();
-		}
+	if(FOUND_DOMAINS_STORAGE_KEY in changes || EXCLUDED_DOMAINS_STORAGE_KEY in changes){
+		setExcludedDomainsInList();
+		populateStoredSecureDomainsUl();
 	}
 });
 
 //****************************** EXCLUDED DOMAINS ******************************
 
-function fetchExcludedDomains(){
-	// Fetch the list of excluded domains from the user's sync'd storage
-	DOMAINS_STORAGE.get(
-		EXCLUDED_DOMAINS_STORAGE_KEY,
-		setExcludedDomainsInList
-	);
-}
 
 function addExcludedDomain(e){
 	// Event handler for 'submit' event of form for adding an excluded domain
@@ -123,24 +95,7 @@ function addExcludedDomain(e){
 	// afterwards
 	addExcludedDomainToDisplayList(domain);
 	updateEmptyExcludedDomainsDisplay();
-
-	// Fetch the existing domains and add this one to it
-	DOMAINS_STORAGE.get(
-		EXCLUDED_DOMAINS_STORAGE_KEY,
-		function(items){
-			var domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
-			if(domains.indexOf(domain) !== -1){
-				// If it's already in there, just bail
-				return;
-			}
-			domains.push(domain);
-			items[EXCLUDED_DOMAINS_STORAGE_KEY] = domains; // Necessary if the array was empty
-			// Store the updated items
-			console.log("Setting excluded domains:");
-			console.log(items);
-			DOMAINS_STORAGE.set(items, showSavedMessage);
-		}
-	);
+	domainsStorage.addExcludedDomain(domain);
 	return false;
 }
 
@@ -148,22 +103,8 @@ function removeExcludedDomain(e){
 	// Event handler for the 'Remove' button for an excluded domain
 	var $li = $(this).closest("li");
 	var domain = $li.find("span").text().trim();
-	$li.remove();
-	updateEmptyExcludedDomainsDisplay();
-	DOMAINS_STORAGE.get(
-		EXCLUDED_DOMAINS_STORAGE_KEY,
-		function(items){
-			var domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
-			if(!domains.length){
-				return;
-			}
-			var index = domains.indexOf(domain);
-			if(index > -1){
-				domains.splice(index, 1);
-			}
-			DOMAINS_STORAGE.set(items, showSavedMessage);
-		}
-	);
+	$li.remove(); // This isn't strictly necessary as the next line will trigger a callback
+	domainsStorage.removeExcludedDomain(domain);
 }
 
 function addExcludedDomainToDisplayList(domain){
@@ -188,8 +129,9 @@ function updateEmptyExcludedDomainsDisplay(){
 }
 
 function setExcludedDomainsInList(items){
-	// Callback from chrome.storage.sync which gives us the user's list of excluded domains
-	var domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
+	// Take the list of excluded domains from storage and display it in the <ul>
+	$("#excluded_domains li:not(.form)").remove();
+	var domains = domainsStorage.getExcludedDomains();
 	var $form = $("#excluded_domains li.form");
 	var domain, $li;
 	if(!domains.length){
@@ -207,13 +149,11 @@ function setExcludedDomainsInList(items){
 //****************************** STORED SECURE DOMAINS ******************************
 
 
-function fetchKnownSecureDomains(){
-	DOMAINS_STORAGE.get(FOUND_DOMAINS_STORAGE_KEY, populateStoredSecureDomainsUl);
-}
-
 function populateStoredSecureDomainsUl(items){
+	// Take the list of known secure domains from storage and display them in the <ul>
 	console.log("populateStoredSecureDomainsUl");
-	var domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
+	$("#secure_domains li").remove();
+	var domains = domainsStorage.getKnownSecureDomains();
 	var $ul = $("#secure_domains");
 	if(!domains.length){
 		$('<li/>').addClass("empty").text("No domains found yet").appendTo($ul);
@@ -229,6 +169,10 @@ function populateStoredSecureDomainsUl(items){
 //****************************** INIT ******************************
 
 function init(){
+	domainsStorage = chrome.extension.getBackgroundPage().domainsStorage;
+	domainsStorage.addOnReadyListener(populateStoredSecureDomainsUl);
+	domainsStorage.addOnReadyListener(setExcludedDomainsInList);
+
 	fetchOptions();
 
 	$(document).on('click', '#excluded_domains button.remove', removeExcludedDomain);
