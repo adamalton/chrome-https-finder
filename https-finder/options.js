@@ -86,11 +86,14 @@ function setDomainsStorage(){
 }
 
 
-// When the syncDomains setting goes from false to true, the background page script will combine
-// the local lists of known/excluded domains with the ones in 'sync' storage (if any). So we need
-// to listen to the changing of the domains lists and update the <ul>s in this page accordingly.
+// When the syncDomains setting goes from false to true, the background page script will take the
+// lists of known/excluded domains from 'sync' storage and combine them into the lists in 'local'
+// storage. So we need to listen to the changing of the local domains lists and update the <ul>s
+// in this page accordingly. If we listen to the changing of the lists in 'sync' storage, then when
+// the syncDomains setting goes from true to false we will catch the wiping out of the list 'sync'
+// and will end up displaying empty <ul>s.
 chrome.storage.onChanged.addListener(function(changes, namespace){
-	if(namespace === "sync"){
+	if(namespace === "local"){
 		if(FOUND_DOMAINS_STORAGE_KEY in changes || EXCLUDED_DOMAINS_STORAGE_KEY in changes){
 			// This is slightly crude, but it saves duplication!
 			$("#excluded_domains li:not(.form)").remove();
