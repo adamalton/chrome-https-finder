@@ -98,7 +98,8 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 });
 
 function handleSyncDomainsSettingChange(new_value){
-	// Change handler for the 'sync' setting.
+	// Called when settings.syncDomains is changed in chrome.storage.sync.
+	// new_value is a boolean.
 	console.log("handleSyncDomainsSettingChange");
 	// When this setting is changed (either by the user in the Options screen or because they've
 	// changed it in the Options screen on another device and the setting itself is being synced
@@ -125,15 +126,18 @@ function handleSyncDomainsSettingChange(new_value){
 				[FOUND_DOMAINS_STORAGE_KEY, EXCLUDED_DOMAINS_STORAGE_KEY],
 				function(items){
 					// Combine the storage.local arrays with the storage.sync arrays
-					var combined_secure_domains = items[FOUND_DOMAINS_STORAGE_KEY] || [];
-					combined_secure_domains.concat(local_secure_domains);
-					combined_secure_domains = arrayUnique(combined_secure_domains);
-					var combined_excluded_domains = items[EXCLUDED_DOMAINS_STORAGE_KEY] || [];
-					combined_excluded_domains.concat(local_excluded_domains);
+					var combined_secure_domains = arrayUnique(local_secure_domains.concat(
+						items[FOUND_DOMAINS_STORAGE_KEY] || []
+					));
+					var combined_excluded_domains = arrayUnique(local_excluded_domains.concat(
+						items[EXCLUDED_DOMAINS_STORAGE_KEY] || []
+					));
 					combined_excluded_domains = arrayUnique(combined_excluded_domains);
 					// And set the combined arrays back into storage.sync
 					items[FOUND_DOMAINS_STORAGE_KEY] = combined_secure_domains;
 					items[EXCLUDED_DOMAINS_STORAGE_KEY] = combined_excluded_domains;
+					console.log("Setting combined (local and sync) domains lists back into sync storage:");
+					console	.log(items);
 					chrome.storage.sync.set(items);
 				}
 			);
