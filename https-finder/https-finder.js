@@ -87,10 +87,24 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 		// using the 'sync' storage then ignore it.
 		if(settings.syncDomains && namespace === "sync" || !settings.syncDomains && namespace === "local"){
 			if(key === EXCLUDED_DOMAINS_STORAGE_KEY){
-				excluded_domains = changes[key].newValue;
+				excluded_domains = arrayUnique(excluded_domains.concat(changes[key].newValue));
+				if(namespace == "sync"){
+					// If the change came from 'sync' (probably from another device), sync it back to
+					// 'local' storage
+					var items = {};
+					items[EXCLUDED_DOMAINS_STORAGE_KEY] = excluded_domains;
+					chrome.storage.local.set(items);
+				}
 				console.log("Updated exluded domains list from storage change event.");
 			}else if(key === FOUND_DOMAINS_STORAGE_KEY){
-				secure_domains = changes[key].newValue;
+				secure_domains = arrayUnique(secure_domains.concat(changes[key].newValue));
+				if(namespace == "sync"){
+					// If the change came from 'sync' (probably from another device), sync it back to
+					// 'local' storage
+					var items = {};
+					items[FOUND_DOMAINS_STORAGE_KEY] = secure_domains;
+					chrome.storage.local.set(items);
+				}
 				console.log("Updated known HTTPS domains list from storage change event.");
 			}
 		}
